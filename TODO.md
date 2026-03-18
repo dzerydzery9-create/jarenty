@@ -1,13 +1,1 @@
-# AI Agent Builder - Implementation TODO Tracker
-Status: Priorytet 2 IPC Tools (approved plan)
-
-## Current Steps (from approved plan):
-- [ ] 1. Update agents/AgentTool.ts: Replace mock execute → real electronAPI.tools calls
-- [ ] 2. Update agents/FileSystemAgent.ts: Replace AI mocks → real tool calls
-- [ ] 3. Minor edit src/plugin-system/AgentSystem.ts: Add readFile tool to code agent
-- [ ] 4. Test: npm run dev + chat 'create test.txt with hello world' → verify file created
-- [ ] 5. Update TODO files [x] Priorytet 2 → Priorytet 3 VSCode Layout
-
-**Next after completion: Priorytet 3**
-
-Updated progressively.
+# AI Agent Builder - Master TODO Tracker&#10;&#10;## Status: Priorytet 2 IPC Tools - Test Pending → Priorytet 3 VSCode Layout&#10;&#10;### Completed:&#10;- [x] IPC code (IPCTypes.ts, main.ts, preload.ts, AgentTool.ts, FileSystemAgent.ts)&#10;- [x] AgentSystem.ts tools → electronAPI&#10;&#10;### Pending Test (KROK 1):&#10;- [ ] Test IPC: App chat &#39;utwórz test.txt z \&#34;hello world\&#34;&#39; → plik utworzony&#10;  Komenda: ./open-app.sh → Chat → wpisz polecenie&#10;&#10;### Priorytet 3: VSCode Layout&#10;- [ ] Dodaj tabbed editor (Editor.tsx)&#10;- [ ] Keyboard shortcuts (Ctrl+P CommandPalette) (FullVSCodeLayout.tsx)&#10;- [ ] Syntax highlighting (monaco-editor or Prism)&#10;- [ ] CommandPalette full impl&#10;- [ ] Project templates panel&#10;&#10;### Follow-up:&#10;1. Test IPC&#10;2. `npm i monaco-editor`&#10;3. npm run dev&#10;4. Test layout/shortcuts&#10;&#10;Ostatnia aktualizacja: Teraz

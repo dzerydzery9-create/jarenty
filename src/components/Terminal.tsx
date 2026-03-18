@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Terminal as XTerm } from 'xterm';
 
-const Terminal: React.FC = () => {
+import { Terminal as XTerm } from 'xterm';&#10;&#10;const Terminal: React.FC = () => {
   const terminalRef = useRef<HTMLDivElement>(null);
   const [lines, setLines] = useState<string[]>([
     '$ AI Agent Builder Terminal',

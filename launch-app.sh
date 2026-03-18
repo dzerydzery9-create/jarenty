@@ -19,7 +19,7 @@ sleep 2
 
 # Start the development server (React + Electron)
 echo "Starting application..."
-npm run dev
+npm run dist || ./dist/AI-Agent-Builder_*_amd64.AppImage
 
 # Cleanup on exit
 trap "kill $API_PID" EXIT

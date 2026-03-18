@@ -92,13 +92,7 @@ const [selectedModel, setSelectedModel] = useState<string>('qwen2.5:0.5b');
     }
   };
 
-  const sendMessage = () => {
-    if (input.trim()) {
-      setMessages([...messages, `You: ${input}`]);
-      setInput('');
-      // TODO: Integrate with Agent API
-    }
-  };
+// sendMessage replaced by handleSendMessage with proper Message type
 
   return (
     <div className="flex flex-col h-full bg-gray-900">
@@ -167,7 +161,7 @@ const [selectedModel, setSelectedModel] = useState<string>('qwen2.5:0.5b');
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+onKeyPress={(e) => e.key === 'Enter' && !loading && handleSendMessage()}
             placeholder="Ask me anything..."
             className="flex-1 bg-gray-700 border border-gray-600 rounded px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-cyan-400"
           />
