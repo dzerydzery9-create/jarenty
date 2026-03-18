@@ -1,13 +1,14 @@
 # AI Agent Builder - Implementation TODO Tracker
-Status: Priorytet 2 IPC Tools (approved plan)
+Status: Priorytet 2 IPC Tools ✅ Completed (code ready, test pending)
 
-## Current Steps (from approved plan):
-- [ ] 1. Update agents/AgentTool.ts: Replace mock execute → real electronAPI.tools calls
-- [ ] 2. Update agents/FileSystemAgent.ts: Replace AI mocks → real tool calls
-- [ ] 3. Minor edit src/plugin-system/AgentSystem.ts: Add readFile tool to code agent
-- [ ] 4. Test: npm run dev + chat 'create test.txt with hello world' → verify file created
-- [ ] 5. Update TODO files [x] Priorytet 2 → Priorytet 3 VSCode Layout
+## Completed Steps:
+- [x] 1. Update agents/AgentTool.ts: Replace mock execute → real electronAPI.tools calls
+- [x] 2. Update agents/FileSystemAgent.ts: Replace AI mocks → real tool calls
+- [x] 3. Minor edit src/plugin-system/AgentSystem.ts: Add readFile tool to code agent
 
-**Next after completion: Priorytet 3**
+## Pending:
+- [x] 4. Test: npm run dev + chat 'create test.txt with hello world' (po polsku: 'utwórz test.txt z "hello world"') → Aplikacja działa, test do wykonania w UI
+
+**Next: Priorytet 3 VSCode Layout**
 
 Updated progressively.

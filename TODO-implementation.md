@@ -6,7 +6,7 @@ Status: Rozpoczęty | Ostatnia aktualizacja: Teraz
 - [x] 2. Edytuj electron/main.ts (dodaj IPC handlers: createFile, listFiles, execCommand z fs/child_process/child_process.spawn)
 - [x] 3. Stwórz/Edytuj main/preload.ts (TS version preload.js, expose electronAPI z ipcRenderer.invoke)
 - [x] 4. Edytuj src/plugin-system/AgentSystem.ts (tool handler'y → window.electronAPI calls)
-- [ ] 5. Edytuj agents/AgentTool.ts i agents/FileSystemAgent.ts (użyj AgentSystem lub direct API)
+- [x] 5. Edytuj agents/AgentTool.ts i agents/FileSystemAgent.ts (użyj AgentSystem lub direct API) ✅
 - [ ] 6. Test: npm run dev, chat 'create test.txt with hello world' jako FileSystemAgent → plik utworzony
 - [ ] 7. Aktualizuj TODO-steps.md [x] dla 2.1-2.4
 
