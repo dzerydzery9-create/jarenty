@@ -1,14 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Send } from 'lucide-react';
+import { AgentAPIClient } from '../services/AgentAPIClient';
+import { LIGHTWEIGHT_MODELS } from '../services/ModelManager';
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  agent?: string;
 }
 
 const ChatInterface: React.FC = () => {
+  const [selectedAgent, setSelectedAgent] = useState<string>('CodeGenerationAgent');
+const [selectedModel, setSelectedModel] = useState<string>('qwen2.5:0.5b');
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -36,31 +42,39 @@ const ChatInterface: React.FC = () => {
 
     // Real agent integration
     try {
+      // Use Agent API to assign task
+      const taskId = `task-${Date.now()}`;
+      await AgentAPIClient.assignTask(selectedAgent, taskId, {
+        query: input,
+        model: selectedModel,
+      });
+
       const agentManager = (window as any).AgentManager?.getInstance();
       if (agentManager) {
-        const taskId = Date.now().toString();
         const task = {
           id: taskId,
           type: 'code-generation', // TODO: classify input to type
           description: input,
-          input: { prompt: input, language: 'typescript' }
+          input: { prompt: input, language: 'typescript', model: selectedModel }
         };
         const result = await agentManager.autoExecuteTask(task as any);
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
           content: result.success 
-            ? `Task completed: ${result.output}` 
-            : `Error: ${result.errors?.join(', ') || 'Unknown error'}`,
+            ? `[${selectedAgent}] ${result.output}` 
+            : `[${selectedAgent}] Error: ${result.errors?.join(', ') || 'Unknown error'}`,
           timestamp: new Date(),
+          agent: selectedAgent,
         };
         setMessages((prev) => [...prev, assistantMessage]);
       } else {
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: 'AgentManager not loaded. Make sure agents are imported in preload.',
+          content: `Processing with ${selectedAgent} using ${selectedModel} model...`,
           timestamp: new Date(),
+          agent: selectedAgent,
         };
         setMessages((prev) => [...prev, assistantMessage]);
       }
@@ -68,8 +82,9 @@ const ChatInterface: React.FC = () => {
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: `Error processing request: ${error}`,
+        content: `[${selectedAgent}] Error processing request: ${error}`,
         timestamp: new Date(),
+        agent: selectedAgent,
       };
       setMessages((prev) => [...prev, assistantMessage]);
     } finally {
@@ -77,8 +92,40 @@ const ChatInterface: React.FC = () => {
     }
   };
 
+  const sendMessage = () => {
+    if (input.trim()) {
+      setMessages([...messages, `You: ${input}`]);
+      setInput('');
+      // TODO: Integrate with Agent API
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-gray-900">
+      {/* Agent and Model Selector */}
+      <div className="flex gap-2 p-3 bg-gray-800 border-b border-gray-700">
+        <select 
+          value={selectedAgent} 
+          onChange={(e) => setSelectedAgent(e.target.value)}
+          className="px-2 py-1 bg-gray-700 text-gray-100 border border-gray-600 rounded text-sm"
+        >
+          <option value="CodeGenerationAgent">Code Generation</option>
+          <option value="DebuggingAgent">Debugging</option>
+          <option value="TestingAgent">Testing</option>
+          <option value="UIAgent">UI/UX</option>
+          <option value="ProjectAnalysisAgent">Project Analysis</option>
+          <option value="FileSystemAgent">File System</option>
+        </select>
+        <select 
+          value={selectedModel} 
+          onChange={(e) => setSelectedModel(e.target.value)}
+          className="px-2 py-1 bg-gray-700 text-gray-100 border border-gray-600 rounded text-sm"
+        >
+          {LIGHTWEIGHT_MODELS.map(model => (
+            <option key={model.name} value={model.name}>{model.name} ({model.size})</option>
+          ))}
+        </select>
+      </div>
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => (

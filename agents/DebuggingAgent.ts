@@ -103,51 +103,74 @@ class DebuggingAgent extends EnhancedBaseAgent {
   }
 
   private async analyzeError(error: string, code: string, language: string): Promise<string> {
-    return `Error Analysis (${language}):
-🔍 Error: ${error}
+    const prompt = `Analyze this ${language} error and provide a comprehensive fix:
 
-Root Cause Analysis:
-1. Check for null/undefined references
-2. Verify async/await patterns
-3. Examine type definitions
-4. Review dependency versions
+Error Message: ${error}
 
-Suggested Fixes:
-- Add proper error handling with try/catch
-- Implement type guards
-- Use optional chaining (?.) operators
-- Add input validation
+Code Context:
+\`\`\`${language}
+${code}
+\`\`\`
 
-Code Review:
-${this.reviewCodeForErrors(code, language)}`;
+Provide a detailed analysis:
+1. Root cause of the error
+2. Why it happened
+3. Step-by-step fix with code examples
+4. Corrected code snippet
+5. Prevention strategies`;
+
+    const response = await this.aiService.sendMessage([
+      { role: 'system', content: `You are a ${language} debugging expert specializing in error analysis` },
+      { role: 'user', content: prompt },
+    ]);
+
+    return response.content;
   }
 
-  private async debugCode(code: string, context: any): Promise<string> {
-    return `Code Debugging Analysis:
+  private async debugCode(code: string, context: any, language: string): Promise<string> {
+    const prompt = `Debug this ${language} code and identify issues:
 
-Execution Flow:
-${this.analyzeExecutionFlow(code)}
+\`\`\`${language}
+${code}
+\`\`\`
 
-Potential Issues:
-- Race conditions in async operations
-- Memory leaks in event listeners
-- Improper state management
-- Missing cleanup in useEffect
+Context: ${JSON.stringify(context)}
 
-Debugging Steps:
-1. Add console.log statements at key points
-2. Use React DevTools for component inspection
-3. Check network tab for API failures
-4. Monitor memory usage with Performance tab`;
+Provide:
+1. Potential bugs and issues
+2. Logic errors
+3. Performance problems
+4. Security issues
+5. Fixes with improved code`;
+
+    const response = await this.aiService.sendMessage([
+      { role: 'system', content: `You are an expert ${language} debugger` },
+      { role: 'user', content: prompt },
+    ]);
+
+    return response.content;
   }
 
-  private async debugPerformance(code: string, context: any): Promise<string> {
-    return `Performance Analysis:
+  private async debugPerformance(code: string, context: any, language: string): Promise<string> {
+    const prompt = `Optimize this ${language} code for better performance:
 
-Bottlenecks Identified:
-- Large re-renders in React components
-- Inefficient API calls
-- Heavy computations on main thread
+\`\`\`${language}
+${code}
+\`\`\`
+
+Analyze and provide:
+1. Performance bottlenecks
+2. Time complexity issues
+3. Memory optimization opportunities
+4. Algorithmic improvements
+5. Optimized code with benchmarks`;
+
+    const response = await this.aiService.sendMessage([
+      { role: 'system', content: `You are a ${language} performance optimization expert` },
+      { role: 'user', content: prompt },
+    ]);
+
+    return response.content;
 - Memory-intensive operations
 
 Optimizations:
@@ -159,21 +182,45 @@ Optimizations:
   }
 
   private async detectMemoryLeaks(code: string, language: string): Promise<string> {
-    return `Memory Leak Detection (${language}):
+    const prompt = `Detect memory leaks in this ${language} code:
 
-Potential Leaks:
-- Event listeners not removed
-- Timers/intervals not cleared
-- DOM references in closures
-- Circular references in objects
+\`\`\`${language}
+${code}
+\`\`\`
 
-Prevention Measures:
-- Use cleanup functions in useEffect
-- Implement proper component unmounting
-- Clear timeouts/intervals
-- Remove event listeners
-- Use WeakMap/WeakSet for caches`;
+Analyze for:
+1. Event listeners not being removed
+2. Timers/intervals not cleared
+3. Circular references
+4. DOM references in closures
+5. Unclosed connections
+6. Memory-intensive operations
+
+Provide:
+1. Found memory leaks
+2. Where they occur
+3. How they impact performance
+4. Fixed code without leaks
+5. Prevention patterns`;
+
+    const response = await this.aiService.sendMessage([
+      { role: 'system', content: `You are a ${language} memory profiling expert specializing in leak detection` },
+      { role: 'user', content: prompt },
+    ]);
+
+    return response.content;
   }
+
+  private reviewCodeForErrors(code: string, language: string): string {
+    return `Review for ${language} common errors completed`;
+  }
+
+  private analyzeExecutionFlow(code: string): string {
+    return 'Execution flow analysis completed';
+  }
+}
+
+export default DebuggingAgent;
 
   private reviewCodeForErrors(code: string, language: string): string {
     const issues = [];

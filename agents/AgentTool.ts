@@ -44,10 +44,20 @@ export class BuiltInTools {
       ],
     },
     execute: async (params) => {
-      // Will be implemented by TerminalExecutor
-      return `[File content from ${params.path}]`;
+if (typeof window === 'undefined' || !window.electronAPI) {
+        console.warn('Electron API not available, using mock');
+        return `[File content from ${params.path}]`;
+      }
+      try {
+        const result = await window.electronAPI.ipcRenderer.invoke('fs:readFile', params.path);
+        return { content: result };
+      } catch (error: unknown) {
+        return { content: '', error: (error as Error).message };
+      }
     },
+
   };
+
 
   static readonly writeFile: AgentTool = {
     definition: {
@@ -59,9 +69,20 @@ export class BuiltInTools {
       ],
     },
     execute: async (params) => {
-      return `File written to ${params.path}`;
+      if (typeof window === 'undefined' || !window.electronAPI?.tools) {
+        console.warn('Electron API not available, using mock');
+        return `File written to ${params.path}`;
+      }
+      try {
+        const result = await window.electronAPI.tools.createFile({ path: params.path, content: params.content });
+        return result;
+      } catch (error: unknown) {
+        return { success: false, error: (error as Error).message };
+      }
     },
+
   };
+
 
   // Shell command tools
   static readonly executeCommand: AgentTool = {
@@ -74,9 +95,20 @@ export class BuiltInTools {
       ],
     },
     execute: async (params) => {
-      return `Command executed: ${params.command}`;
+      if (typeof window === 'undefined' || !window.electronAPI?.tools) {
+        console.warn('Electron API not available, using mock');
+        return `Command executed: ${params.command}`;
+      }
+      try {
+        const result = await window.electronAPI.tools.execCommand({ command: params.command, cwd: params.cwd });
+        return result;
+      } catch (error: unknown) {
+        return { success: false, error: (error as Error).message };
+      }
     },
+
   };
+
 
   // Code analysis tools
   static readonly analyzeCode: AgentTool = {
@@ -153,3 +185,22 @@ export class BuiltInTools {
 }
 
 export default AgentTool;
+
+/**
+ * Type declarations for Electron API (matches preload.ts)
+ */
+declare global {
+  interface Window {
+    electronAPI: {
+      tools: {
+        createFile: (args: { path: string; content: string }) => Promise<any>;
+        listFiles: (args: { path: string; recursive?: boolean }) => Promise<any>;
+        execCommand: (args: { command: string; cwd?: string }) => Promise<any>;
+      };
+      ipcRenderer: {
+        invoke: (channel: string, args?: any) => Promise<any>;
+      };
+    };
+  }
+}
+

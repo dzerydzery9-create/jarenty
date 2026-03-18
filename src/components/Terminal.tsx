@@ -10,6 +10,14 @@ const Terminal: React.FC = () => {
   ]);
   const [input, setInput] = useState('');
 
+  useEffect(() => {
+    const terminal = new XTerm();
+    if (terminalRef.current) {
+      terminal.open(terminalRef.current);
+      terminal.write('Welcome to the AI Agent Builder Terminal!\r\n');
+    }
+  }, []);
+
   const handleCommand = (cmd: string) => {
     if (!cmd.trim()) return;
 

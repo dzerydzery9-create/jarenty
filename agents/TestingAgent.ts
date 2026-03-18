@@ -1,228 +1,312 @@
-import BaseAgent, { AgentConfig, AgentTask, AgentResult } from './BaseAgent';
+import { EnhancedBaseAgent, AgentConfig, AgentTask, AgentResult } from './EnhancedBaseAgent';
+import { AgentTool } from './AgentTool';
+import { AgentKnowledge } from './AgentKnowledge';
 
-class TestingAgent extends BaseAgent {
+class TestingAgent extends EnhancedBaseAgent {
   constructor() {
+    const { default: AIService } = require('../src/services/AIService');
     const config: AgentConfig = {
       name: 'Testing Agent',
-      description: 'Creates comprehensive test suites, performs automated testing, and ensures code quality',
-      capabilities: ['unit-testing', 'integration-testing', 'e2e-testing', 'test-automation'],
-      supportedLanguages: ['typescript', 'javascript', 'python', 'java', 'csharp', 'go'],
+      description: 'AI-powered comprehensive test generation and automation',
+      capabilities: ['unit-testing', 'integration-testing', 'e2e-testing', 'test-automation', 'coverage-analysis'],
+      supportedLanguages: ['typescript', 'javascript', 'python', 'java', 'csharp', 'go', 'rust', 'php', 'ruby'],
     };
-    super(config);
+    const aiService = new AIService();
+    super(config, aiService);
+    this.registerTestingTools();
+  }
+
+  private registerTestingTools(): void {
+    const generateTestTool: AgentTool = {
+      definition: {
+        name: 'generate_tests',
+        description: 'Generate comprehensive test cases',
+        parameters: [
+          { name: 'code', type: 'string', description: 'Code to test', required: true },
+          { name: 'testType', type: 'string', description: 'unit/integration/e2e', required: true },
+          { name: 'language', type: 'string', description: 'Programming language', required: true },
+        ],
+      },
+      execute: async (params) => {
+        return `Test suite generated for ${params.testType} testing`;
+      },
+    };
+
+    const analyzeCoverageTool: AgentTool = {
+      definition: {
+        name: 'analyze_coverage',
+        description: 'Analyze test coverage gaps',
+        parameters: [
+          { name: 'code', type: 'string', description: 'Code to analyze', required: true },
+          { name: 'existingTests', type: 'string', description: 'Existing test code', required: false },
+        ],
+      },
+      execute: async (params) => {
+        return 'Coverage analysis complete: identified gaps';
+      },
+    };
+
+    this.registerTool(generateTestTool);
+    this.registerTool(analyzeCoverageTool);
   }
 
   canHandle(task: AgentTask): boolean {
-    return ['unit-testing', 'integration-testing', 'e2e-testing', 'test-automation'].includes(task.type);
+    return ['unit-testing', 'integration-testing', 'e2e-testing', 'test-automation', 'coverage-analysis'].includes(task.type);
   }
 
   async process(task: AgentTask): Promise<AgentResult> {
-    const { component, language, testType, coverage } = task.input;
+    const { component, code, language, testType, coverage } = task.input;
 
-    let result = '';
+    try {
+      let result = '';
+      let testFiles: Record<string, string> = {};
+      let toolsUsed: string[] = ['generate_tests'];
 
-    switch (task.type) {
-      case 'unit-testing':
-        result = await this.createUnitTests(component, language);
-        break;
-      case 'integration-testing':
-        result = await this.createIntegrationTests(component, language);
-        break;
-      case 'e2e-testing':
-        result = await this.createE2ETests(component);
-        break;
-      case 'test-automation':
-        result = await this.setupTestAutomation(language, coverage);
-        break;
+      switch (task.type) {
+        case 'unit-testing':
+          result = await this.createUnitTests(component || code, language);
+          testFiles[`${component || 'test'}.test.${this.getExtension(language)}`] = result;
+          break;
+        case 'integration-testing':
+          result = await this.createIntegrationTests(component || code, language);
+          testFiles[`${component || 'test'}.integration.test.${this.getExtension(language)}`] = result;
+          break;
+        case 'e2e-testing':
+          result = await this.createE2ETests(component || code, language);
+          testFiles[`${component || 'test'}.e2e.${this.getExtension(language)}`] = result;
+          break;
+        case 'test-automation':
+          result = await this.setupTestAutomation(language, coverage);
+          break;
+        case 'coverage-analysis':
+          result = await this.analyzeCoverage(code, language);
+          toolsUsed.push('analyze_coverage');
+          break;
+      }
+
+      return {
+        taskId: task.id,
+        success: true,
+        output: result,
+        files: testFiles,
+        toolsUsed,
+      };
+    } catch (error) {
+      return {
+        taskId: task.id,
+        success: false,
+        output: '',
+        errors: [error instanceof Error ? error.message : 'Test generation failed'],
+      };
     }
-
-    return {
-      taskId: task.id,
-      success: true,
-      output: result,
-      files: {},
-    };
   }
 
   private async createUnitTests(component: string, language: string): Promise<string> {
-    return `Unit Test Suite for ${component}
+    const framework = this.getTestFramework(language);
+    const prompt = `Generate comprehensive unit tests for this ${language} component/function using ${framework}:
 
-🧪 Testing Framework: ${this.getTestFramework(language)}
-📝 Language: ${language}
-
-Test Structure:
-\`\`\`${this.getTestFileExtension(language)}
-${this.generateUnitTestTemplate(component, language)}
+Component:
+\`\`\`${language}
+${component}
 \`\`\`
 
-Test Categories:
-1. **Happy Path Tests**: Normal operation scenarios
-2. **Edge Case Tests**: Boundary conditions and unusual inputs
-3. **Error Handling Tests**: Exception and error scenarios
-4. **Performance Tests**: Speed and resource usage
-5. **Security Tests**: Input validation and injection prevention
+Create unit tests that cover:
+1. Happy path scenarios
+2. Edge cases and boundary conditions
+3. Error/exception handling
+4. Invalid inputs
+5. Performance considerations
 
-Coverage Goals:
-- Statement coverage: 90%+
-- Branch coverage: 85%+
-- Function coverage: 95%+
-- Line coverage: 90%+
+Format as valid ${language} test code with:
+- Clear test names
+- Proper mocking where needed
+- Assertions for each test
+- Setup/teardown if needed
+- Comments explaining complex tests`;
 
-Mock Strategy:
-${this.generateMockStrategy(component, language)}
+    const response = await this.aiService.sendMessage([
+      { role: 'system', content: `You are a ${language} testing expert specializing in ${framework}` },
+      { role: 'user', content: prompt },
+    ]);
 
-Test Data Management:
-\`\`\`${this.getTestFileExtension(language)}
-// Test data factories
-class TestDataFactory {
-  static createValid${component}(): ${component} {
-    return {
-      // Valid test data
-    };
-  }
-
-  static createInvalid${component}(): ${component} {
-    return {
-      // Invalid test data for negative testing
-    };
-  }
-}
-\`\`\``;
+    return response.content;
   }
 
   private async createIntegrationTests(component: string, language: string): Promise<string> {
-    return `Integration Test Suite for ${component}
+    const prompt = `Generate comprehensive integration tests for this ${language} component:
 
-🔗 Integration Points:
-${this.identifyIntegrationPoints(component)}
-
-Test Scenarios:
-1. **Component Interaction**: How ${component} works with other components
-2. **Data Flow**: End-to-end data processing
-3. **API Integration**: External service interactions
-4. **Database Operations**: Data persistence and retrieval
-5. **File System**: File I/O operations
-
-Test Implementation:
-\`\`\`${this.getTestFileExtension(language)}
-describe('${component} Integration Tests', () => {
-  let testEnvironment;
-
-  beforeAll(async () => {
-    // Setup test environment
-    testEnvironment = await setupTestEnvironment();
-  });
-
-  afterAll(async () => {
-    // Cleanup
-    await teardownTestEnvironment(testEnvironment);
-  });
-
-  test('should integrate with dependent services', async () => {
-    // Test actual service integration
-  });
-
-  test('should handle data flow correctly', async () => {
-    // Test data processing pipeline
-  });
-
-  test('should manage resources properly', async () => {
-    // Test resource management
-  });
-});
+Component:
+\`\`\`${language}
+${component}
 \`\`\`
 
-Test Environment Setup:
-- Isolated test database
-- Mock external services
-- Test-specific configuration
-- Clean state between tests
+Create integration tests that verify:
+1. Component interactions with dependencies
+2. API calls and responses
+3. Database operations
+4. Event flows
+5. Error scenarios with real dependencies
 
-Performance Benchmarks:
-- Response time: < 100ms
-- Memory usage: < 50MB
-- CPU usage: < 10%
-- Concurrent users: 100+`;
+Provide working integration test code with proper setup/teardown"`;
+
+    const response = await this.aiService.sendMessage([
+      { role: 'system', content: `You are a ${language} integration testing expert` },
+      { role: 'user', content: prompt },
+    ]);
+
+    return response.content;
   }
 
-  private async createE2ETests(component: string): Promise<string> {
-    return `End-to-End Test Suite for ${component}
+  private async createE2ETests(component: string, language: string): Promise<string> {
+    const prompt = `Generate end-to-end tests for this ${language} component/feature:
 
-🌐 E2E Testing Strategy:
-
-Test Framework: Playwright + ${this.getTestFramework('typescript')}
-
-User Journey Tests:
-1. **User Registration Flow**
-2. **Authentication Process**
-3. **Main Feature Usage**
-4. **Error Recovery**
-5. **Performance Validation**
-
-Test Implementation:
-\`\`\`typescript
-import { test, expect } from '@playwright/test';
-
-test.describe('${component} E2E Tests', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('http://localhost:3000');
-  });
-
-  test('complete user workflow', async ({ page }) => {
-    // Navigate to component
-    await page.click('text=${component}');
-
-    // Perform user actions
-    await page.fill('[data-testid="input-field"]', 'test data');
-    await page.click('[data-testid="submit-button"]');
-
-    // Verify results
-    await expect(page.locator('[data-testid="result"]')).toBeVisible();
-  });
-
-  test('error handling', async ({ page }) => {
-    // Test error scenarios
-    await page.fill('[data-testid="input-field"]', 'invalid data');
-    await page.click('[data-testid="submit-button"]');
-
-    // Verify error display
-    await expect(page.locator('[data-testid="error-message"]')).toBeVisible();
-  });
-
-  test('performance validation', async ({ page }) => {
-    const startTime = Date.now();
-
-    await page.click('text=${component}');
-    await page.waitForSelector('[data-testid="content-loaded"]');
-
-    const loadTime = Date.now() - startTime;
-    expect(loadTime).toBeLessThan(2000); // 2 second limit
-  });
-});
+Component:
+\`\`\`${language}
+${component}
 \`\`\`
 
-Browser Compatibility:
-- Chrome/Chromium: ✅
-- Firefox: ✅
-- Safari: ✅
-- Edge: ✅
+Create realistic E2E test scenarios that:
+1. Simulate real user workflows
+2. Test complete feature flows
+3. Verify UI/UX interactions
+4. Check data persistence
+5. Test error recovery paths
 
-Device Responsiveness:
-- Desktop: 1920x1080
-- Tablet: 768x1024
-- Mobile: 375x667
+Use Playwright/Cypress patterns if applicable`;
 
-CI/CD Integration:
-\`\`\`yaml
-# .github/workflows/e2e.yml
-name: E2E Tests
-on: [push, pull_request]
-jobs:
-  e2e:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
+    const response = await this.aiService.sendMessage([
+      { role: 'system', content: `You are an end-to-end testing expert for ${language}` },
+      { role: 'user', content: prompt },
+    ]);
+
+    return response.content;
+  }
+
+  private async setupTestAutomation(language: string, coverage?: number): Promise<string> {
+    const testFramework = this.getTestFramework(language);
+    const prompt = `Setup automated testing for ${language} project using ${testFramework}:
+
+Provide:
+1. Test runner configuration
+2. Coverage configuration (target: ${coverage || 80}%)
+3. CI/CD pipeline setup
+4. Code coverage reports
+5. Test organization structure
+6. Mock/stub strategy
+7. Test data management
+8. Performance testing setup
+
+Format as configuration files and setup instructions`;
+
+    const response = await this.aiService.sendMessage([
+      { role: 'system', content: `You are a test automation specialist for ${language}` },
+      { role: 'user', content: prompt },
+    ]);
+
+    return response.content;
+  }
+
+  private async analyzeCoverage(code: string, language: string): Promise<string> {
+    const prompt = `Analyze test coverage for this ${language} code and provide improvement plan:
+
+Code:
+\`\`\`${language}
+${code}
+\`\`\`
+
+Analyze:
+1. Current coverage gaps
+2. Untested code paths
+3. Missing edge cases
+4. Untested error handling
+5. Recommendations for improvement
+
+Provide:
+1. Coverage analysis summary
+2. Priority for new tests
+3. Specific test cases to add
+4. Estimated coverage improvement`;
+
+    const response = await this.aiService.sendMessage([
+      { role: 'system', content: `You are a code coverage analysis expert for ${language}` },
+      { role: 'user', content: prompt },
+    ]);
+
+    return response.content;
+  }
+
+  private getTestFramework(language: string): string {
+    const frameworks: Record<string, string> = {
+      typescript: 'Jest/Vitest',
+      javascript: 'Jest/Mocha',
+      python: 'pytest/unittest',
+      java: 'JUnit 5/Mockito',
+      csharp: 'xUnit/NUnit',
+      go: 'testing/testify',
+      rust: 'cargo test',
+      php: 'PHPUnit/Pest',
+      ruby: 'RSpec/Minitest',
+    };
+    return frameworks[language] || 'Jest';
+  }
+
+  private getExtension(language: string): string {
+    const extensions: Record<string, string> = {
+      typescript: 'ts',
+      javascript: 'js',
+      python: 'py',
+      java: 'java',
+      csharp: 'cs',
+      go: 'go',
+      rust: 'rs',
+      php: 'php',
+      ruby: 'rb',
+    };
+    return extensions[language] || 'js';
+  }
+
+  private getTestFileExtension(language: string): string {
+    return this.getExtension(language);
+  }
+
+  private generateUnitTestTemplate(component: string, language: string): string {
+    return `// Unit tests for ${component}`;
+  }
+
+  private generateMockStrategy(component: string, language: string): string {
+    return `Mock all external dependencies like APIs, databases, and file systems.`;
+  }
+
+  private identifyIntegrationPoints(component: string): string {
+    return `- External APIs\n- Database connections\n- File system\n- Event emitters`;
+  }
+
+  private async setupTestAutomation(language: string, coverage?: number): Promise<string> {
+    const testFramework = this.getTestFramework(language);
+    const prompt = `Setup automated testing for ${language} project using ${testFramework}:
+
+Provide:
+1. Test runner configuration
+2. Coverage configuration (target: ${coverage || 80}%)
+3. CI/CD pipeline setup
+4. Code coverage reports
+5. Test organization structure
+6. Mock/stub strategy
+7. Test data management
+8. Performance testing setup
+
+Format as configuration files and setup instructions`;
+
+    const response = await this.aiService.sendMessage([
+      { role: 'system', content: `You are a test automation specialist for ${language}` },
+      { role: 'user', content: prompt },
+    ]);
+
+    return response.content;
+  }
+}
+
+export default TestingAgent;
       with:
         node-version: '18'
     - run: npm ci

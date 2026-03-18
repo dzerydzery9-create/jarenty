@@ -88,6 +88,18 @@ const Sidebar: React.FC<SidebarProps> = ({ activePanel, setView }) => {
           </div>
         );
 
+      case 'agents':
+        return (
+          <div className="p-4 space-y-3">
+            <h3 className="text-sm font-semibold text-white">Agents</h3>
+            <ul>
+              <li>Agents</li>
+              <li>Tasks</li>
+              <li>Settings</li>
+            </ul>
+          </div>
+        );
+
       default:
         return null;
     }

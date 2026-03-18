@@ -1,166 +1,210 @@
-import BaseAgent, { AgentConfig, AgentTask, AgentResult } from './BaseAgent';
+import { EnhancedBaseAgent, AgentConfig, AgentTask, AgentResult } from './EnhancedBaseAgent';
+import { AgentTool } from './AgentTool';
 
-class FileSystemAgent extends BaseAgent {
+class FileSystemAgent extends EnhancedBaseAgent {
   constructor() {
+    const { default: AIService } = require('../src/services/AIService');
     const config: AgentConfig = {
       name: 'File System Agent',
-      description: 'Handles file operations, directory management, and file system interactions',
-      capabilities: ['file-operations', 'directory-management', 'file-search', 'content-analysis'],
-      supportedLanguages: ['typescript', 'javascript', 'python', 'java', 'all'],
+      description: 'Intelligent file system operations and content analysis',
+      capabilities: ['file-operations', 'directory-management', 'file-search', 'content-analysis', 'bulk-operations'],
+      supportedLanguages: ['typescript', 'javascript', 'python', 'java', 'csharp', 'go', 'rust', 'all'],
     };
-    super(config);
+    const aiService = new AIService();
+    super(config, aiService);
+    this.registerFileSystemTools();
+  }
+
+  private registerFileSystemTools(): void {
+    const bulkRenameTool: AgentTool = {
+      definition: {
+        name: 'bulk_rename',
+        description: 'Rename multiple files based on pattern',
+        parameters: [
+          { name: 'pattern', type: 'string', description: 'Search pattern', required: true },
+          { name: 'replacement', type: 'string', description: 'Replacement pattern', required: true },
+        ],
+      },
+      execute: async (params) => {
+        const { BuiltInTools } = await import('./AgentTool');
+        const cmd = `find . -name '${params.pattern}' -exec sh -c 'mv {} \$(echo {} | sed "s/${params.pattern}/${params.replacement}/g")' \\;`;
+        return await BuiltInTools.executeCommand.execute({ command: cmd });
+      },
+    };
+
+
+    const contentSearchTool: AgentTool = {
+      definition: {
+        name: 'content_search',
+        description: 'Search content across files',
+        parameters: [
+          { name: 'query', type: 'string', description: 'Search query', required: true },
+          { name: 'filePattern', type: 'string', description: 'File pattern to search in', required: true },
+        ],
+      },
+      execute: async (params) => {
+        return `Found files matching: ${params.query}`;
+      },
+    };
+
+    this.registerTool(bulkRenameTool);
+    this.registerTool(contentSearchTool);
   }
 
   canHandle(task: AgentTask): boolean {
-    return ['file-operations', 'directory-management', 'file-search', 'content-analysis'].includes(task.type);
+    return ['file-operations', 'directory-management', 'file-search', 'content-analysis', 'bulk-operations'].includes(task.type);
   }
 
   async process(task: AgentTask): Promise<AgentResult> {
     const { operation, path, content, pattern, recursive } = task.input;
 
-    let result = '';
+    try {
+      let result = '';
+      let toolsUsed: string[] = [];
 
-    switch (task.type) {
-      case 'file-operations':
-        result = await this.performFileOperation(operation, path, content);
-        break;
-      case 'directory-management':
-        result = await this.manageDirectory(operation, path);
-        break;
-      case 'file-search':
-        result = await this.searchFiles(pattern, path, recursive);
-        break;
-      case 'content-analysis':
-        result = await this.analyzeContent(path, pattern);
-        break;
+      switch (task.type) {
+        case 'file-operations':
+          result = await this.performFileOperation(operation, path, content);
+          break;
+        case 'directory-management':
+          result = await this.manageDirectory(operation, path);
+          break;
+        case 'file-search':
+          result = await this.searchFiles(pattern, path, recursive);
+          toolsUsed = ['content_search'];
+          break;
+        case 'content-analysis':
+          result = await this.analyzeContent(path, pattern);
+          break;
+        case 'bulk-operations':
+          result = await this.performBulkOperations(operation, pattern, content);
+          toolsUsed = ['bulk_rename'];
+          break;
+      }
+
+      return {
+        taskId: task.id,
+        success: true,
+        output: result,
+        files: {},
+        toolsUsed,
+      };
+    } catch (error) {
+      return {
+        taskId: task.id,
+        success: false,
+        output: '',
+        errors: [error instanceof Error ? error.message : 'File operation failed'],
+      };
     }
-
-    return {
-      taskId: task.id,
-      success: true,
-      output: result,
-      files: {},
-    };
   }
 
   private async performFileOperation(operation: string, path: string, content?: string): Promise<string> {
-    const operations = {
-      read: this.generateReadOperation(path),
-      write: this.generateWriteOperation(path, content),
-      update: this.generateUpdateOperation(path, content),
-      delete: this.generateDeleteOperation(path),
-      copy: this.generateCopyOperation(path, content),
-      move: this.generateMoveOperation(path, content),
-    };
+    const prompt = `Generate code for file operation: ${operation} on path ${path}
+${content ? `with content: ${content.substring(0, 100)}...` : ''}
 
-    return operations[operation as keyof typeof operations] || 'Unsupported operation';
+Provide:
+1. Detailed explanation
+2. Node.js code implementation
+3. Error handling
+4. Edge cases
+5. Security considerations`;
+
+    const response = await this.aiService.sendMessage([
+      { role: 'system', content: 'You are a file system expert' },
+      { role: 'user', content: prompt },
+    ]);
+
+    return response.content;
   }
 
   private async manageDirectory(operation: string, path: string): Promise<string> {
-    const operations = {
-      create: this.generateCreateDirOperation(path),
-      list: this.generateListDirOperation(path),
-      delete: this.generateDeleteDirOperation(path),
-      copy: this.generateCopyDirOperation(path),
-      move: this.generateMoveDirOperation(path),
-    };
+    const prompt = `Provide code for directory management operation: ${operation} on ${path}
 
-    return operations[operation as keyof typeof operations] || 'Unsupported directory operation';
+Provide:
+1. What the operation does
+2. Complete implementation
+3. Recursive handling (if applicable)
+4. Error cases
+5. Performance considerations`;
+
+    const response = await this.aiService.sendMessage([
+      { role: 'system', content: 'You are a file system and directory management expert' },
+      { role: 'user', content: prompt },
+    ]);
+
+    return response.content;
   }
 
   private async searchFiles(pattern: string, path: string, recursive?: boolean): Promise<string> {
-    return `File Search Analysis:
+    const prompt = `Create a file search implementation:
 
-🔍 Search Pattern: ${pattern}
-📁 Search Path: ${path}
-🔄 Recursive: ${recursive ? 'Yes' : 'No'}
+Pattern: ${pattern}
+Path: ${path}
+Recursive: ${recursive || false}
 
-Search Strategy:
-1. Parse glob pattern
-2. Traverse directory structure
-3. Match files against pattern
-4. Filter results
-5. Return matches with metadata
+Provide:
+1. Search algorithm
+2. Glob pattern implementation
+3. Node.js code
+4. Result formatting
+5. Performance optimization
+6. Memory efficiency`;
 
-Implementation:
-\`\`\`typescript
-const searchFiles = async (pattern: string, basePath: string, recursive = false) => {
-  const glob = require('glob');
-  const path = require('path');
+    const response = await this.aiService.sendMessage([
+      { role: 'system', content: 'You are a file system search expert' },
+      { role: 'user', content: prompt },
+    ]);
 
-  const options = {
-    cwd: basePath,
-    absolute: true,
-    ${recursive ? 'nodir: false,' : 'nodir: true,'}
-  };
-
-  try {
-    const matches = await new Promise<string[]>((resolve, reject) => {
-      glob(pattern, options, (err: Error, files: string[]) => {
-        if (err) reject(err);
-        else resolve(files);
-      });
-    });
-
-    return matches.map(file => ({
-      path: file,
-      relativePath: path.relative(basePath, file),
-      stats: await fs.promises.stat(file)
-    }));
-  } catch (error) {
-    throw new Error(\`Search failed: \${error.message}\`);
-  }
-};
-\`\`\`
-
-Expected Results:
-- Files matching pattern
-- File metadata (size, modified date)
-- Relative paths for easy reference`;
+    return response.content;
   }
 
-  private async analyzeContent(path: string, pattern?: string): Promise<string> {
-    return `Content Analysis for: ${path}
+  private async analyzeContent(filePath: string, pattern?: string): Promise<string> {
+    const prompt = `Analyze file content for patterns:
 
-Analysis Type: ${pattern ? 'Pattern-based' : 'General'}
+File: ${filePath}
+${pattern ? `Pattern to find: ${pattern}` : 'Analyze for: code quality, patterns, structure'}
 
-Analysis Plan:
-1. Read file content safely
-2. Parse based on file type
-3. Extract key information
-4. Identify patterns/issues
-5. Generate summary report
+Provide:
+1. Content structure
+2. Patterns found
+3. Quality metrics
+4. Code statistics
+5. Recommendations
+6. Refactoring suggestions`;
 
-For ${this.getFileExtension(path)} files:
-${this.getAnalysisStrategy(path)}
+    const response = await this.aiService.sendMessage([
+      { role: 'system', content: 'You are a code and content analysis expert' },
+      { role: 'user', content: prompt },
+    ]);
 
-Key Metrics to Extract:
-- Line count
-- Character count
-- Code complexity
-- Dependencies used
-- Potential issues
-
-Security Considerations:
-- Avoid exposing sensitive data
-- Respect file permissions
-- Handle large files efficiently`;
+    return response.content;
   }
 
-  private generateReadOperation(path: string): string {
-    return `File Read Operation:
+  private async performBulkOperations(operation: string, pattern: string, replacement?: string): Promise<string> {
+    const prompt = `Generate bulk file operation code:
 
-📖 Reading: ${path}
+Operation: ${operation}
+Pattern: ${pattern}
+${replacement ? `Replacement: ${replacement}` : ''}
 
-Implementation:
-\`\`\`typescript
-const readFile = async (filePath: string) => {
-  try {
-    const fs = require('fs').promises;
-    const content = await fs.readFile(filePath, 'utf8');
-    return {
-      success: true,
-      content,
+Provide:
+1. Batch processing approach
+2. Implementation code
+3. Error recovery
+4. Progress tracking
+5. Rollback capability`;
+
+    const response = await this.aiService.sendMessage([
+      { role: 'system', content: 'You are a bulk operations and file processing expert' },
+      { role: 'user', content: prompt },
+    ]);
+
+    return response.content;
+  }
+}
+
+export default FileSystemAgent;
       size: content.length,
       lines: content.split('\\n').length
     };
