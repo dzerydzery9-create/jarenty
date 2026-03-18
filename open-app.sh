@@ -22,7 +22,7 @@ echo ""
 
 # Try to open browser
 if command -v xdg-open > /dev/null; then
-    xdg-open http://localhost:3000
+/home/jarek/ai-agent-builder/dist/AI-Agent-Builder_1.0.0_amd64.AppImage
 elif command -v open > /dev/null; then
     open http://localhost:3000
 else
