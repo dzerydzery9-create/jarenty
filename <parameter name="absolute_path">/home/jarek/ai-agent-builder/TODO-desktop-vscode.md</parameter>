@@ -1,0 +1,1 @@
+<parameter name="content"># VS Code+ Desktop Improve TODO&#10;&#10;- [ ] 1. Fix Terminal.tsx (clean XTerm)&#10;- [ ] 2. ollama pull deepseek-coder:1.3b&#10;- [ ] 3. Switch App.tsx to FullVSCodeLayout.tsx&#10;- [ ] 4. Add Monaco editor&#10;- [ ] 5. Test desktop app&#10;- [ ] 6. Update TODO mark [x]&#10;</parameter>

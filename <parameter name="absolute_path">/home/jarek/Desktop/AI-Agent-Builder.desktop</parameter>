@@ -1,0 +1,11 @@
+<parameter name="content">[Desktop Entry]
+Version=1.0
+Type=Application
+Name=AI Agent Builder Desktop
+Comment=AI Agent Builder - Pure Desktop GUI (no browser)
+Exec=/home/jarek/ai-agent-builder/launch-desktop.sh
+Icon=/home/jarek/Desktop/ai-agent-builder-icon.png
+Terminal=false
+Categories=Development;IDE;
+Keywords=AI;desktop;electron;agent;builder;
+Path=/home/jarek/ai-agent-builder</parameter>

@@ -1,0 +1,1 @@
+<parameter name="content"># Desktop Launcher&#10;&#10;✅ Skrót na pulpicie: AI-Agent-Builder.desktop&#10;Podwójne kliknięcie → otwiera app (localhost:3000)&#10;&#10;Alternatywy:&#10;./open-app.sh&#10;./launch-safe.sh&#10;skrót Ctrl+Alt+T → cd ai-agent-builder && ./open.sh</parameter>

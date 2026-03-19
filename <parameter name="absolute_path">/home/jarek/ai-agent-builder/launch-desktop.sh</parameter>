@@ -1,0 +1,9 @@
+<parameter name="content">#!/bin/bash
+APP_PATH=$(find dist -name '*AppImage' | head -1)
+if [ -n \"$APP_PATH\" ]; then
+  echo \"Uruchamiam desktop Electron AppImage...\"
+  \"$APP_PATH\"
+else
+  echo \"Build AppImage: npm run dist\"
+  npm run dist
+fi</parameter>

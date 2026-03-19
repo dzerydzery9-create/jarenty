@@ -1,0 +1,30 @@
+<parameter name="content">import React, { useEffect, useRef, useState } from 'react';
+import { Terminal as XTerm } from 'xterm';
+import 'xterm/css/xterm.css';
+
+const Terminal: React.FC = () => {
+  const terminalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const terminal = new XTerm({
+      cursorBlink: true,
+      theme: {
+        background: '#1e1e1e',
+        foreground: '#ffffff',
+      },
+    });
+    if (terminalRef.current) {
+      terminal.open(terminalRef.current);
+      terminal.write('AI Agent Builder Terminal v1.0\\r\\n$ ');
+    }
+    return () => {
+      terminal.dispose();
+    };
+  }, []);
+
+  return (
+    <div ref={terminalRef} className="h-full font-mono text-xs" />
+  );
+};
+
+export default Terminal;</parameter>
