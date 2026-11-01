@@ -1,0 +1,2 @@
+{"ts":"2026-03-22T21:57:10.396Z","type":"webview_request","endpointId":"local","mode":"devds","action":null,"model":"deepseek-coder:1.3b"}
+{"ts":"2026-03-22T21:57:55.582Z","type":"webview_error","endpointId":"local","mode":"devds","action":null,"model":"deepseek-coder:1.3b","durationMs":45505,"error":"aborted","errorKind":"other","retriedWithFallback":false}
